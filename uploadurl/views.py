@@ -1,4 +1,5 @@
 import logging
+import tempfile
 
 from urllib2 import urlopen, HTTPError, URLError
 
@@ -9,26 +10,22 @@ from mediagoblin.plugins.api.tools import get_entry_serializable
 _log = logging.getLogger(__name__)
 
 def upload_handler(request):
-	print(request)
-	print(request.user)
-	print(request.GET)
-	print(request.GET.get('title'))
 	if request.GET.get('url') and request.GET.get('title') and request.user:
 		upload_limit, max_file_size = get_upload_file_limits(request.user)
 		try:
 			f = urlopen(request.GET.get('url'))
 			fname = request.GET.get('url')[request.GET.get('url').rfind('/')+1:]
-			print(fname)
-			local_file = open("tmptmptmp", "w")
-			local_file.write(f.read())
-			local_file.close()
-			local_file = open("tmptmptmp", "r")
+			tmpfile = tempfile.NamedTemporaryFile()
+			tmpfile.write(f.read)
+			tmpfile.flush()
+			local_file = open(tmpfile.name, "r")
 			try:
 				entry = submit_media(
 					mg_app = request.app, user=request.user,
 					submitted_file=local_file, filename=fname,
 					title=request.GET.get('title'))
 				entryinfo = get_entry_serializable(entry, request.urlgen)
+				os.unlink(f.name)
 				return json_response({'status':200, 'permalink':entryinfo['permalink']})
 			except FileUploadLimit:
 				return json_reponse({'status':400, 'error':'Past File size Upload Limit'})
